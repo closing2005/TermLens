@@ -21,6 +21,7 @@ public partial class App : Application
     private readonly bool desktopIntegration;
     public bool Exiting { get; private set; }
     public ApiSettings Settings { get; set; } = new();
+    public DisplaySettings Display { get; private set; } = new();
     public ExplanationClient Client { get; }
     public HistoryStore History { get; }
     public App() : this(new ExplanationClient()) { }
@@ -43,6 +44,7 @@ public partial class App : Application
         string? warning = null;
         try { Settings = SettingsStore.Load(); }
         catch (UserError ex) { warning = ex.Message; }
+        Display = DisplayStore.Load();
         main = new MainWindow(this);
         MainWindow = main;
         handle = new WindowInteropHelper(main).EnsureHandle();
@@ -142,6 +144,13 @@ public partial class App : Application
     {
         Native.GetCursorPos(out var anchor);
         (lookup ??= new LookupWindow(this)).ShowSaved(entry, anchor);
+    }
+    public void SetDisplay(DisplaySettings display)
+    {
+        Display = display.Normalize();
+        main?.ApplyDisplay();
+        lookup?.ApplyDisplay();
+        if (desktopIntegration) DisplayStore.Save(Display);
     }
     public void TogglePause()
     {

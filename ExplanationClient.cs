@@ -41,11 +41,17 @@ public sealed class ExplanationClient : IDisposable
             并指出可补充原句确认；没有重要歧义则填空字符串。无法确定时明确表示不确定，不要编造术语或英文全称。
             例如没有上下文的 Transformer 默认解释为深度学习架构，同时提示也可能指电气领域的变压器。
             如上下文讨论电压或输电，则应解释为变压器，而不是强行解释成机器学习。
+            解释要比词典释义更详细，但保持初学者能理解。先给出准确的核心定义；
+            principle 用分步方式说明原理或工作流程，首次出现的相关术语要顺带解释。
+            example 给出一个具体、可跟随的小例子，包含输入、过程和结果；不要只重复生活比喻。
+            pitfalls 说明常见误解、适用边界或局限；不要编造性能数据。没有适用内容时简短说明。
             仅输出一个 JSON 对象，按下面顺序输出全部字符串字段，不要 Markdown 围栏：
             {"chinese":"中文名称","english":"英文名称","meaning":"当前采用的含义及领域",
-            "ambiguity":"必要时说明其他可能含义和不确定性","definition":"一句话定义",
-            "analogy":"一个生活比喻，必要时指出比喻局限","usage":"1至2个实际用途"}
-            解释简洁易懂，总长度约 350 个中文字符。不要输出公式或大段背景。
+            "ambiguity":"必要时说明其他可能含义和不确定性","definition":"用1至3句话给出准确的核心定义",
+            "principle":"原理与步骤，用换行分步说明",
+            "analogy":"一个生活比喻，必要时指出比喻局限","example":"一个具体例子及其过程和结果",
+            "usage":"2至3个实际用途及其适用原因","pitfalls":"常见误区与局限"}
+            总长度以约 700 至 1000 个中文字符为目标，按概念复杂度调整，不凑字数。可以用简单数字帮助理解，不堆砌公式或无关背景。
             """;
         var payload = new { model = settings.Model.Trim(), messages = new[] {
             new { role = "system", content = instruction },
@@ -163,7 +169,7 @@ public sealed class ExplanationClient : IDisposable
             {
                 using var doc = JsonDocument.Parse(text[start..(end + 1)]);
                 string Field(string name) => doc.RootElement.TryGetProperty(name, out var p) && p.ValueKind == JsonValueKind.String ? p.GetString()!.Trim() : "";
-                var result = new Explanation(Field("chinese"), Field("english"), Field("definition"), Field("analogy"), Field("usage"), null, Field("meaning"), Field("ambiguity"));
+                var result = new Explanation(Field("chinese"), Field("english"), Field("definition"), Field("analogy"), Field("usage"), null, Field("meaning"), Field("ambiguity"), Field("principle"), Field("example"), Field("pitfalls"));
                 if (new[] { result.Chinese, result.Definition, result.Analogy, result.Usage }.All(x => x.Length > 0)) return result;
             }
             catch (JsonException) { }
@@ -192,7 +198,7 @@ public sealed class ExplanationClient : IDisposable
             if (!valueDone) break;
         }
         string Field(string key) => fields.GetValueOrDefault(key, "");
-        return new(Field("chinese").Length > 0 ? Field("chinese") : term, Field("english"), Field("definition"), Field("analogy"), Field("usage"), null, Field("meaning"), Field("ambiguity"));
+        return new(Field("chinese").Length > 0 ? Field("chinese") : term, Field("english"), Field("definition"), Field("analogy"), Field("usage"), null, Field("meaning"), Field("ambiguity"), Field("principle"), Field("example"), Field("pitfalls"));
     }
     private static string ReadPrefixString(string text, ref int i, out bool complete)
     {

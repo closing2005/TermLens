@@ -19,3 +19,4 @@ settings.json
 *.pem
 *.key
 *-test-profile*/
+history.dat

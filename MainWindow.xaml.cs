@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.Linq;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
@@ -18,6 +19,8 @@ public partial class MainWindow : Window
         UrlInput.Text = app.Settings.BaseUrl;
         KeyInput.Password = app.Settings.ApiKey;
         ModelInput.Text = app.Settings.Model;
+        app.History.Changed += RefreshHistory;
+        RefreshHistory();
         if (string.IsNullOrEmpty(app.Settings.ApiKey)) Tabs.SelectedIndex = 1;
         Closing += (_, e) =>
         {
@@ -30,6 +33,25 @@ public partial class MainWindow : Window
     public void SetStatus(string text) => Status.Text = text;
     public void SetPaused(bool paused) => PauseButton.Content = paused ? "○ 划词已暂停" : "● 划词已开启";
     public void OpenSettings() => Tabs.SelectedIndex = 1;
+    public void OpenHistory() { Tabs.SelectedIndex = 2; RefreshHistory(); }
+    private void RefreshHistory()
+    {
+        if (HistoryList == null) return;
+        var filter = HistoryFilter.Text.Trim();
+        var visible = app.History.Entries.Where(x => filter.Length == 0 || x.Term.Contains(filter, StringComparison.OrdinalIgnoreCase) || x.Context.Contains(filter, StringComparison.OrdinalIgnoreCase)).ToArray();
+        HistoryList.ItemsSource = visible;
+        HistoryCount.Text = $"共 {app.History.Entries.Count} 条 · 显示 {visible.Length} 条";
+        HistoryEmpty.Text = filter.Length > 0 ? "没有匹配的历史记录。" : "还没有查询历史。完成一次查询后会自动保存。";
+        HistoryEmpty.Visibility = visible.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+        HistoryStatus.Text = app.History.Warning;
+        ClearHistoryButton.IsEnabled = app.History.Entries.Count > 0 || app.History.Warning.Length > 0;
+    }
+    private void HistoryFilter_Changed(object sender, TextChangedEventArgs e) => RefreshHistory();
+    private void HistoryOpen_Click(object sender, RoutedEventArgs e)
+    {
+        if (((Button)sender).Tag is HistoryEntry entry) app.ShowHistoryEntry(entry);
+    }
+    private void ClearHistory_Click(object sender, RoutedEventArgs e) => app.History.Clear();
     private void Pause_Click(object sender, RoutedEventArgs e) => app.TogglePause();
     private void Query_Click(object sender, RoutedEventArgs e) => Query();
     private void Term_KeyDown(object sender, KeyEventArgs e) { if (e.Key == Key.Enter) { Query(); e.Handled = true; } }

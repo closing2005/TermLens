@@ -22,8 +22,13 @@ public partial class App : Application
     public bool Exiting { get; private set; }
     public ApiSettings Settings { get; set; } = new();
     public ExplanationClient Client { get; }
+    public HistoryStore History { get; }
     public App() : this(new ExplanationClient()) { }
-    public App(ExplanationClient client, bool desktopIntegration = true) { Client = client; this.desktopIntegration = desktopIntegration; }
+    public App(ExplanationClient client, bool desktopIntegration = true, HistoryStore? history = null)
+    {
+        Client = client; this.desktopIntegration = desktopIntegration;
+        History = history ?? new HistoryStore(desktopIntegration ? HistoryStore.DefaultPath : null);
+    }
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -56,12 +61,12 @@ public partial class App : Application
             selection.MouseDown += point =>
             {
                 if (badge != null && !Native.Contains(badge, point)) badge.Dismiss();
-                if (lookup != null && !Native.Contains(lookup, point)) lookup.Dismiss();
             };
         }
         catch (UserError ex) { warning = ex.Message; }
         var menu = new Forms.ContextMenuStrip();
         menu.Items.Add("打开术语镜", null, (_, _) => ShowMain());
+        menu.Items.Add("查询历史", null, (_, _) => ShowHistory());
         menu.Items.Add("查询剪贴板文字  Ctrl+Alt+D", null, (_, _) => ClipboardQuery());
         pauseItem = new Forms.ToolStripMenuItem("暂停划词", null, (_, _) => TogglePause());
         menu.Items.Add(pauseItem);
@@ -127,6 +132,16 @@ public partial class App : Application
     {
         main?.Show();
         if (main != null) { main.WindowState = WindowState.Normal; if (settings) main.OpenSettings(); main.Activate(); }
+    }
+    public void ShowHistory()
+    {
+        ShowMain();
+        main?.OpenHistory();
+    }
+    public void ShowHistoryEntry(HistoryEntry entry)
+    {
+        Native.GetCursorPos(out var anchor);
+        (lookup ??= new LookupWindow(this)).ShowSaved(entry, anchor);
     }
     public void TogglePause()
     {

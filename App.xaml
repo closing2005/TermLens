@@ -34,6 +34,7 @@
    </ControlTemplate></Setter.Value></Setter>
   </Style>
   <Style TargetType="Button">
+   <Setter Property="HorizontalContentAlignment" Value="Center"/>
    <Setter Property="Padding" Value="14,9"/>
    <Setter Property="Margin" Value="0,0,8,0"/>
    <Setter Property="Background" Value="#FAEEEA"/>
@@ -45,7 +46,7 @@
     <Setter.Value>
      <ControlTemplate TargetType="Button">
       <Border x:Name="Chrome" Background="{TemplateBinding Background}" CornerRadius="3" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}">
-       <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+       <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center"/>
       </Border>
       <ControlTemplate.Triggers>
        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource Accent}"/></Trigger>

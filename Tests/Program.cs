@@ -68,11 +68,12 @@ internal static partial class Program
         Test("配置：空密钥与空模型被拒绝", () => { Throws<UserError>(() => new ApiSettings("https://example.com", "", "model").Validate()); Throws<UserError>(() => new ApiSettings("https://example.com", "key", "").Validate()); });
         Test("输入：空词与超长词被拒绝", () => { Throws<UserError>(() => QueryRules.Validate("  ", "")); Throws<UserError>(() => QueryRules.Validate(new string('a', QueryRules.MaxTerm + 1), "")); });
         Test("输入：上下文长度限制", () => Throws<UserError>(() => QueryRules.Validate("RF", new string('x', 3001))));
-        Test("解析：结构化解释", () => { var answer = ExplanationClient.Parse(Answer, "RF"); Equal(answer.English, "Random Forest"); Assert(answer.CopyText.Contains("一句话定义")); });
+        Test("解析：结构化解释", () => { var answer = ExplanationClient.Parse(Answer, "RF"); Equal(answer.English, "Random Forest"); Assert(answer.CopyText.Contains("核心定义")); });
         Test("解析：兼容代码围栏", () => Equal(ExplanationClient.Parse("```json\n" + Answer + "\n```", "RF").Chinese, "随机森林"));
         Test("解析：非结构化回答保留原文", () => Equal(ExplanationClient.Parse("通俗的原文解释", "RF").Plain, "通俗的原文解释"));
         Test("解析：空回答被拒绝", () => Throws<UserError>(() => ExplanationClient.Parse(" ", "RF")));
         Test("密钥：Windows 加密往返且非明文", () => { var encrypted = SecretProtection.Protect("local-test-secret-测试"); Assert(!encrypted.Contains("local-test-secret")); Equal(SecretProtection.Unprotect(encrypted), "local-test-secret-测试"); });
+        HistoryTests();
         ApiTests().GetAwaiter().GetResult();
         UpgradeApiTests().GetAwaiter().GetResult();
         if (Array.IndexOf(args, "--selection") >= 0)
@@ -178,6 +179,8 @@ internal static partial class Program
             Assert(ReferenceEquals(lazyPopup, field.GetValue(app)));
             lazyPopup.Dismiss();
         });
+        Test("界面：失焦不关闭、不取消查询，手动关闭仍有效", () => UiPersistent(app, popup, uiHandler));
+        Test("界面：历史筛选、离线回看和清空", () => UiHistory(app, main, uiHandler));
         SynchronizationContext.SetSynchronizationContext(null);
     }
     private static void RenderContent(Window window, int width, int height, string path)

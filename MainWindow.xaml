@@ -85,6 +85,35 @@
      </StackPanel>
     </ScrollViewer>
    </TabItem>
+   <TabItem Header="查询历史">
+    <Grid Margin="0,18,0,0">
+     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+     <StackPanel>
+      <TextBlock Text="回看查过的概念。" FontSize="23" FontWeight="SemiBold" Margin="0,0,0,8"/>
+      <TextBlock Text="最近 100 条，仅保存在本机。点击查看已有解释；卡片里的“重新查询”会再次调用 AI。" Foreground="{StaticResource Muted}" FontSize="12" Margin="0,0,0,16"/>
+     </StackPanel>
+     <TextBox x:Name="HistoryFilter" Grid.Row="1" TextChanged="HistoryFilter_Changed" ToolTip="按词句或上下文筛选历史" AutomationProperties.AutomationId="HistoryFilter"/>
+     <DockPanel Grid.Row="2" Margin="0,8,0,10">
+      <Button x:Name="ClearHistoryButton" Content="清空历史" DockPanel.Dock="Right" Style="{StaticResource Quiet}" Padding="8,5" Margin="0" Click="ClearHistory_Click"/>
+      <TextBlock x:Name="HistoryCount" Foreground="{StaticResource Muted}" FontSize="11" VerticalAlignment="Center"/>
+     </DockPanel>
+     <Grid Grid.Row="3">
+      <ListBox x:Name="HistoryList" Background="White" BorderBrush="{StaticResource Line}" BorderThickness="1" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
+       <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem"><Setter Property="HorizontalContentAlignment" Value="Stretch"/><Setter Property="Padding" Value="0"/></Style></ListBox.ItemContainerStyle>
+       <ListBox.ItemTemplate><DataTemplate>
+        <Button Tag="{Binding}" Click="HistoryOpen_Click" HorizontalContentAlignment="Stretch" Background="White" Foreground="{StaticResource Ink}" BorderThickness="1" Padding="12,10" Margin="0">
+         <StackPanel>
+          <TextBlock Text="{Binding Preview}" FontSize="14" FontWeight="SemiBold"/>
+          <TextBlock Text="{Binding Caption}" Foreground="{StaticResource Muted}" FontSize="11" Margin="0,5,0,0"/>
+         </StackPanel>
+        </Button>
+       </DataTemplate></ListBox.ItemTemplate>
+      </ListBox>
+      <TextBlock x:Name="HistoryEmpty" Text="还没有查询历史。完成一次查询后会自动保存。" Foreground="{StaticResource Muted}" FontSize="12" Margin="18" VerticalAlignment="Top" IsHitTestVisible="False"/>
+     </Grid>
+     <TextBlock x:Name="HistoryStatus" Grid.Row="4" Foreground="{StaticResource Accent}" FontSize="11" Margin="0,10,0,0"/>
+    </Grid>
+   </TabItem>
   </TabControl>
   <StackPanel Grid.Row="2" Margin="0,14,0,0">
    <TextBlock x:Name="Status" Text="就绪 · 点击查询时才联网" Foreground="{StaticResource Muted}" FontSize="11"/>

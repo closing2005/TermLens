@@ -14,7 +14,7 @@
      <StackPanel Orientation="Horizontal" IsHitTestVisible="False"><Image Source="{StaticResource BrandMark}" Width="20" Height="20" Margin="0,0,8,0"/><TextBlock Text="术语镜" FontSize="12" Foreground="{StaticResource Muted}" VerticalAlignment="Center"/></StackPanel>
     </DockPanel>
    </Border>
-   <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+   <ScrollViewer x:Name="ContentScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto">
     <StackPanel Margin="22,20">
      <TextBlock x:Name="TitleText" FontSize="27" FontWeight="SemiBold"/>
      <TextBlock x:Name="EnglishText" Foreground="{StaticResource Muted}" FontSize="13" Margin="0,6,0,18"/>
@@ -32,16 +32,28 @@
         <TextBlock x:Name="AmbiguityText" FontSize="12" LineHeight="21" Foreground="#70706E" Margin="0,6,0,0"/>
        </StackPanel>
       </Border>
-      <TextBlock Text="一句话理解" Foreground="{StaticResource Accent}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,7"/>
+      <TextBlock Text="核心定义" Foreground="{StaticResource Accent}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,7"/>
       <TextBlock x:Name="DefinitionText" LineHeight="26" Margin="0,0,0,18"/>
+      <StackPanel x:Name="PrinciplePanel" Visibility="Collapsed" Margin="0,0,0,18">
+       <TextBlock Text="原理与步骤" Foreground="{StaticResource Accent}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,7"/>
+       <TextBlock x:Name="PrincipleText" LineHeight="26"/>
+      </StackPanel>
       <Border BorderBrush="{StaticResource Accent}" BorderThickness="2,0,0,0" Padding="13,0,0,0" Margin="0,0,0,18">
        <StackPanel>
         <TextBlock Text="打个比方" Foreground="{StaticResource Accent}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,7"/>
         <TextBlock x:Name="AnalogyText" LineHeight="26"/>
        </StackPanel>
       </Border>
+      <StackPanel x:Name="ExamplePanel" Visibility="Collapsed" Margin="0,0,0,18">
+       <TextBlock Text="具体例子" Foreground="{StaticResource Accent}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,7"/>
+       <TextBlock x:Name="ExampleText" LineHeight="26"/>
+      </StackPanel>
       <TextBlock Text="实际用途" Foreground="{StaticResource Accent}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,7"/>
       <TextBlock x:Name="UsageText" LineHeight="26"/>
+      <StackPanel x:Name="PitfallsPanel" Visibility="Collapsed" Margin="0,18,0,0">
+       <TextBlock Text="常见误区与局限" Foreground="{StaticResource Accent}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,7"/>
+       <TextBlock x:Name="PitfallsText" LineHeight="26"/>
+      </StackPanel>
      </StackPanel>
     </StackPanel>
    </ScrollViewer>
@@ -59,8 +71,10 @@
       <Button Style="{StaticResource Quiet}" FontSize="12" x:Name="RetryButton" Content="重新查询" Padding="12,7" Click="Retry_Click"/>
       <Button Style="{StaticResource Quiet}" FontSize="12" x:Name="PlainButton" Content="普通查询" Padding="10,7" Click="Plain_Click" ToolTip="服务不支持流式输出时使用；会重新发送查询"/>
       <Button Style="{StaticResource Quiet}" FontSize="12" Content="设置" Padding="12,7" Click="Settings_Click"/>
+      <Button Style="{StaticResource Quiet}" FontSize="12" Content="历史" Padding="12,7" Click="History_Click"/>
      </WrapPanel>
-     <TextBlock Text="AI 生成，仅供理解参考 · 点击外部关闭" Foreground="{StaticResource Muted}" FontSize="10" Margin="0,10,0,0"/>
+     <TextBlock x:Name="HistoryNotice" Foreground="{StaticResource Muted}" FontSize="10" Margin="0,8,0,0"/>
+     <TextBlock Text="AI 生成，仅供理解参考 · 点击 × 或按 Esc 关闭" Foreground="{StaticResource Muted}" FontSize="10" Margin="0,8,0,0"/>
     </StackPanel>
    </Border>
   </Grid>

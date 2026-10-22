@@ -17,7 +17,6 @@ public partial class LookupWindow : Window
     private readonly Stopwatch elapsed = new();
     private readonly DispatcherTimer waitingTimer = new() { Interval = TimeSpan.FromSeconds(1) };
     private bool receivedText;
-    private bool dismissOnDeactivate;
     public LookupWindow(App app)
     {
         this.app = app;
@@ -29,7 +28,6 @@ public partial class LookupWindow : Window
             e.Cancel = true;
             Dismiss();
         };
-        Deactivated += (_, _) => { if (dismissOnDeactivate) Dismiss(); };
         PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape) { Dismiss(); e.Handled = true; } };
     }
     public async void Query(string selected, string suppliedContext, Native.Point anchor, bool stream = true)
@@ -45,6 +43,8 @@ public partial class LookupWindow : Window
         DefinitionText.Text = AnalogyText.Text = UsageText.Text = "";
         Sections.Visibility = Visibility.Collapsed;
         MessageText.Visibility = Visibility.Collapsed;
+        HistoryNotice.Text = "";
+        ContentScroll.ScrollToTop();
         CopyButton.IsEnabled = false;
         CopyButton.Content = "复制解释";
         RetryButton.IsEnabled = false;
@@ -54,16 +54,9 @@ public partial class LookupWindow : Window
         elapsed.Restart();
         waitingTimer.Start();
         LoadingPanel.Visibility = Visibility.Visible;
-        // Initial native DPI/position changes can generate a transient deactivate.
-        // Outside clicks are also handled by the global mouse hook in App.
-        dismissOnDeactivate = false;
         Show();
         Native.Place(this, anchor);
         Activate();
-        _ = Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, () =>
-        {
-            if (version == generation && IsVisible) dismissOnDeactivate = true;
-        });
         pending = new CancellationTokenSource();
         var cancellation = pending;
         var progress = new ViewProgress(partial => Dispatcher.BeginInvoke(() =>
@@ -77,6 +70,8 @@ public partial class LookupWindow : Window
             var result = await app.Client.ExplainAsync(app.Settings, term, context, cancellation.Token, progress, stream);
             if (version != generation || !IsVisible) return;
             Render(result);
+            app.History.Remember(term, context, result);
+            HistoryNotice.Text = app.History.Warning;
         }
         catch (OperationCanceledException) { }
         catch (UserError ex) { if (version == generation) ShowMessage(ex.Message); }
@@ -101,6 +96,20 @@ public partial class LookupWindow : Window
         RenderContent(result);
         CopyButton.IsEnabled = true;
     }
+    public void ShowSaved(HistoryEntry entry, Native.Point anchor)
+    {
+        CancelPending();
+        term = entry.Term; context = entry.Context;
+        ContextInput.Text = context;
+        ContextExpander.IsExpanded = false;
+        LoadingPanel.Visibility = Visibility.Collapsed;
+        RetryButton.IsEnabled = PlainButton.IsEnabled = true;
+        CopyButton.Content = "复制解释";
+        Render(entry.Answer);
+        HistoryNotice.Text = "历史记录 · " + entry.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm") + " · 重新查询可获取新解释";
+        ContentScroll.ScrollToTop();
+        Show(); Native.Place(this, anchor); Activate();
+    }
     private sealed class ViewProgress(Action<Explanation> update) : IProgress<Explanation>
     {
         public void Report(Explanation value) => update(value);
@@ -117,6 +126,12 @@ public partial class LookupWindow : Window
             DefinitionText.Text = result.Definition;
             AnalogyText.Text = result.Analogy;
             UsageText.Text = result.Usage;
+            PrincipleText.Text = result.Principle;
+            ExampleText.Text = result.Example;
+            PitfallsText.Text = result.Pitfalls;
+            PrinciplePanel.Visibility = result.Principle.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+            ExamplePanel.Visibility = result.Example.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+            PitfallsPanel.Visibility = result.Pitfalls.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
             MeaningText.Text = result.Meaning;
             AmbiguityText.Text = result.Ambiguity;
             AmbiguityText.Visibility = result.Ambiguity.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -144,6 +159,7 @@ public partial class LookupWindow : Window
         term = context = "";
         TitleText.Text = EnglishText.Text = DefinitionText.Text = AnalogyText.Text = UsageText.Text = "";
         MeaningText.Text = AmbiguityText.Text = MessageText.Text = ContextInput.Text = "";
+        PrincipleText.Text = ExampleText.Text = PitfallsText.Text = HistoryNotice.Text = "";
         CopyButton.IsEnabled = false;
     }
     private void Close_Click(object sender, RoutedEventArgs e) => Dismiss();
@@ -171,7 +187,8 @@ public partial class LookupWindow : Window
         Native.GetWindowRect(new System.Windows.Interop.WindowInteropHelper(this).Handle, out var rect);
         Query(term, ContextInput.Text, new Native.Point(rect.Left - 12, rect.Top - 18), stream);
     }
-    private void Settings_Click(object sender, RoutedEventArgs e) { Dismiss(); app.ShowMain(true); }
+    private void Settings_Click(object sender, RoutedEventArgs e) => app.ShowMain(true);
+    private void History_Click(object sender, RoutedEventArgs e) => app.ShowHistory();
     private void Copy_Click(object sender, RoutedEventArgs e)
     {
         try { Clipboard.SetText(explanation?.CopyText ?? ""); CopyButton.Content = "已复制"; }

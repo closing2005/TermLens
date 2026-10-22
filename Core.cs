@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -7,6 +7,7 @@ using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -50,9 +51,16 @@ public static class QueryRules
     }
 }
 
-public sealed record Explanation(string Chinese, string English, string Definition, string Analogy, string Usage, string? Plain = null, string Meaning = "", string Ambiguity = "")
+public sealed record Explanation(string Chinese, string English, string Definition, string Analogy, string Usage, string? Plain = null, string Meaning = "", string Ambiguity = "", string Principle = "", string Example = "", string Pitfalls = "")
 {
-    public string CopyText => Plain ?? $"{Chinese}\n{English}\n\n一句话定义\n{Definition}\n\n通俗比喻\n{Analogy}\n\n实际用途\n{Usage}" + (Meaning.Length > 0 ? $"\n\n当前含义\n{Meaning}" : "") + (Ambiguity.Length > 0 ? $"\n\n其他可能含义\n{Ambiguity}" : "");
+    [JsonIgnore]
+    public string CopyText => Plain ?? $"{Chinese}\n{English}\n\n核心定义\n{Definition}"
+        + (Principle.Length > 0 ? $"\n\n原理与步骤\n{Principle}" : "")
+        + $"\n\n通俗比喻\n{Analogy}"
+        + (Example.Length > 0 ? $"\n\n具体例子\n{Example}" : "")
+        + $"\n\n实际用途\n{Usage}"
+        + (Pitfalls.Length > 0 ? $"\n\n常见误区与局限\n{Pitfalls}" : "")
+        + (Meaning.Length > 0 ? $"\n\n当前含义\n{Meaning}" : "") + (Ambiguity.Length > 0 ? $"\n\n其他可能含义\n{Ambiguity}" : "");
 }
 
 public static class SettingsStore

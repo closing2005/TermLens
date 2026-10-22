@@ -1,5 +1,6 @@
-using System;
+﻿using System;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
@@ -17,8 +18,10 @@ internal static partial class Program
         public string LastContext = "";
         public bool Cancelled;
         public bool Block;
+        public int Requests;
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
         {
+            Requests++;
             using var body = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(token));
             using var data = JsonDocument.Parse(body.RootElement.GetProperty("messages")[1].GetProperty("content").GetString()!);
             var term = data.RootElement.GetProperty("term").GetString();
@@ -46,6 +49,7 @@ internal static partial class Program
         popup.Query("旧查询", "", new Native.Point(100, 100));
         try { PumpUntil(() => ((TextBlock)popup.FindName("DefinitionText")).Text.Contains("未完成")); }
         catch (Exception ex) { throw new Exception(ex.Message + $"; visible={popup.IsVisible}; message={((TextBlock)popup.FindName("MessageText")).Text}; title={((TextBlock)popup.FindName("TitleText")).Text}"); }
+        Assert(!app.History.Entries.Any(x => x.Term == "旧查询"));
         Assert(!((Button)popup.FindName("CopyButton")).IsEnabled);
         popup.Query("新查询", "", new Native.Point(100, 100));
         PumpUntil(() => ((Button)popup.FindName("CopyButton")).IsEnabled);
@@ -73,6 +77,65 @@ internal static partial class Program
         Equal(((TextBlock)popup.FindName("MessageText")).Text, "查询已取消。");
         Assert(((Button)popup.FindName("RetryButton")).IsEnabled);
         Assert(!((Button)popup.FindName("CopyButton")).IsEnabled);
+        Assert(!app.History.Entries.Any(x => x.Term == "等待取消"));
         popup.Dismiss();
+    }
+    private static void UiPersistent(App app, LookupWindow popup, UiHandler handler)
+    {
+        handler.Block = true; handler.Cancelled = false;
+        handler.ReleaseOld = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        popup.Query("保持显示", "", new Native.Point(100, 100));
+        PumpUntil(() => ((TextBlock)popup.FindName("DefinitionText")).Text.Contains("未完成"));
+        ActivateFixture(new System.Windows.Interop.WindowInteropHelper(popup).Handle);
+        var other = new Window { Title = "TermLens focus test", Width = 260, Height = 150 };
+        try
+        {
+            other.Show();
+            ActivateFixture(new System.Windows.Interop.WindowInteropHelper(other).Handle);
+            PumpUntil(() => !popup.IsActive);
+            Assert(popup.IsVisible && !handler.Cancelled);
+            handler.ReleaseOld.TrySetResult();
+            PumpUntil(() => ((Button)popup.FindName("CopyButton")).IsEnabled);
+            Assert(popup.IsVisible);
+            var close = typeof(LookupWindow).GetMethod("Close_Click", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+            close.Invoke(popup, new object[] { popup, new RoutedEventArgs() });
+            Assert(!popup.IsVisible);
+        }
+        finally { other.Close(); popup.Dismiss(); handler.Block = false; handler.ReleaseOld.TrySetResult(); }
+    }
+    private static void UiHistory(App app, MainWindow main, UiHandler handler)
+    {
+        app.History.Clear();
+        var answer = ExplanationClient.Parse(Answer, "RF") with { Principle = "原理示例", Example = "可复现的小例子", Pitfalls = "局限示例" };
+        app.History.Remember("随机森林", "机器学习", answer);
+        app.History.Remember("Transformer", "The transformer reduces voltage.", answer);
+        main.OpenHistory();
+        var list = (ListBox)main.FindName("HistoryList");
+        Equal(list.Items.Count, 2);
+        ((TextBox)main.FindName("HistoryFilter")).Text = "随机";
+        Equal(list.Items.Count, 1);
+        var before = handler.Requests;
+        var previousSettings = app.Settings;
+        app.Settings = new ApiSettings(); // Cached answers must work without a configured service.
+        var item = (HistoryEntry)list.Items[0];
+        var open = typeof(MainWindow).GetMethod("HistoryOpen_Click", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        open.Invoke(main, new object[] { new Button { Tag = item }, new RoutedEventArgs() });
+        var field = typeof(App).GetField("lookup", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        var saved = (LookupWindow)field.GetValue(app)!;
+        Equal(handler.Requests, before);
+        Assert(saved.IsVisible && ((Button)saved.FindName("CopyButton")).IsEnabled);
+        Equal(((TextBlock)saved.FindName("ExampleText")).Text, "可复现的小例子");
+        Assert(((TextBlock)saved.FindName("HistoryNotice")).Text.Contains("历史记录"));
+        RenderContent(main, 544, 660, "artifacts/history-preview.png");
+        RenderContent(saved, 430, 640, "artifacts/detailed-card-preview.png");
+        app.Settings = previousSettings;
+        var retry = typeof(LookupWindow).GetMethod("Retry_Click", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        retry.Invoke(saved, new object[] { saved, new RoutedEventArgs() });
+        PumpUntil(() => handler.Requests > before && ((Button)saved.FindName("CopyButton")).IsEnabled);
+        Equal(app.History.Entries[0].Term, "随机森林");
+        saved.Dismiss();
+        var clear = typeof(MainWindow).GetMethod("ClearHistory_Click", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        clear.Invoke(main, new object[] { main, new RoutedEventArgs() });
+        Equal(list.Items.Count, 0); Equal(app.History.Entries.Count, 0);
     }
 }

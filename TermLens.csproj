@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <AssemblyName>TermLens</AssemblyName>
+    <Version>0.3.1</Version>
+    <!-- WPF owns the UI and DPI manifest. WinForms is used only for the tray and monitor bounds. -->
+    <NoWarn>$(NoWarn);WFAC010</NoWarn>
+    <!-- This application has no transitive framework or package dependencies. -->
+    <DisableTransitiveFrameworkReferenceDownloads>true</DisableTransitiveFrameworkReferenceDownloads>
+  </PropertyGroup>
+  <ItemGroup>
+    <Resource Include="app.ico" />
+    <Compile Remove="Tests\**" />
+    <None Remove="Tests\**" />
+    <Page Remove="design-options\**" />
+  </ItemGroup>
+</Project>
